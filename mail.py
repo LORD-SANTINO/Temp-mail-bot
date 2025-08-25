@@ -7,7 +7,7 @@ import os
 from typing import Dict, Any, List
 
 # Configuration
-TOKEN = "YOUR_BOT_TOKEN_HERE"  # <-- REPLACE THIS WITH YOUR REAL BOT TOKEN
+TOKEN = "8327606596:AAHbJyzdnbNY3rWMfhy7e86S1wqihQxy0JQ"  # <-- REPLACE THIS WITH YOUR REAL BOT TOKEN
 DATA_FILE = "user_sessions.json"
 
 # Load user sessions from file
