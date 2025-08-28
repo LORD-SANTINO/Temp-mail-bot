@@ -4,6 +4,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQuer
 import json
 import os
 import logging
+import mailbox
 import random
 import string
 from typing import Dict, Any
@@ -11,7 +12,7 @@ from typing import Dict, Any
 
 logging.basicConfig(level=logging.DEBUG)
 
-# Inside your _check_single_inbox:
+# Inside your _check_single_inbox: 
 logging.debug(f"Checking Maildrop inbox for mailbox: {mailbox}")
 try:
     resp = requests.get(f"{MAILDROP_API}/mailbox/{mailbox}")
