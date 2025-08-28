@@ -61,10 +61,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🤖 **Welcome to Maildrop TempMail Bot!**\n\n"
         "Generate disposable emails via Maildrop service.\n\n"
         "**Commands:**\n"
-        "/new_email - Generate a new temporary email\n"
-        "/my_emails - List your active emails\n"
-        "/delete_email - Remove an email address\n"
-        "/check_inbox - Check for new messages",
+        "/newemail - Generate a new temporary email\n"
+        "/myemails - List your active emails\n"
+        "/deleteemail - Remove an email address\n"
+        "/checkinbox - Check for new messages",
         parse_mode="Markdown"
     )
 
@@ -215,10 +215,10 @@ def main():
 
     # Register handlers
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("new_email", new_email))
-    application.add_handler(CommandHandler("my_emails", my_emails))
-    application.add_handler(CommandHandler("delete_email", delete_email))
-    application.add_handler(CommandHandler("check_inbox", check_inbox))
+    application.add_handler(CommandHandler("newemail", new_email))
+    application.add_handler(CommandHandler("myemails", my_emails))
+    application.add_handler(CommandHandler("deleteemail", delete_email))
+    application.add_handler(CommandHandler("checkinbox", check_inbox))
     application.add_handler(CallbackQueryHandler(inbox_button_callback, pattern=r'^check_.*'))
 
     # Start polling
