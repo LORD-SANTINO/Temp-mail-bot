@@ -4,31 +4,16 @@ from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQuer
 import json
 import os
 import logging
-import mailbox
 import random
 import string
 from typing import Dict, Any
 
-
 logging.basicConfig(level=logging.DEBUG)
-
-# Inside your _check_single_inbox: 
-logging.debug(f"Checking Maildrop inbox for mailbox: {mailbox}")
-try:
-    resp = requests.get(f"{MAILDROP_API}/mailbox/{mailbox}")
-    resp.raise_for_status()
-    logging.debug(f"Maildrop response code: {resp.status_code}")
-    logging.debug(f"Maildrop response content: {resp.text}")
-    messages = resp.json().get("messages", [])
-except Exception as e:
-    logging.error(f"Error fetching Maildrop mailbox: {e}")
-
 
 TOKEN = "8327606596:AAHbJyzdnbNY3rWMfhy7e86S1wqihQxy0JQ"  # Your Telegram Bot Token here
 DATA_FILE = "user_sessions.json"
 MAILDROP_API = "https://api.maildrop.cc/v1"
 
-# Load sessions
 def load_user_sessions() -> Dict[int, Dict[str, Any]]:
     if os.path.exists(DATA_FILE):
         try:
@@ -39,34 +24,35 @@ def load_user_sessions() -> Dict[int, Dict[str, Any]]:
             return {}
     return {}
 
-def generate_mailbox_name(length=8):
-    mailbox = ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
-    logging.debug(f"Generated mailbox: {mailbox}")
-    return mailbox
-
-# Save sessions
 def save_user_sessions():
     with open(DATA_FILE, 'w') as f:
         json.dump(user_sessions, f, indent=2)
 
 user_sessions: Dict[int, Dict[str, Any]] = load_user_sessions()
 
-# Utility: Generate random mailbox name
 def generate_mailbox_name(length=8):
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+    mailbox = ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+    logging.debug(f"Generated mailbox: {mailbox}")
+    return mailbox
 
-# Command handlers
+def escape_markdown(text: str) -> str:
+    """
+    Escape the Telegram MarkdownV2 special characters.
+    """
+    escape_chars = r'_()*[]~`>#+-=|{}.!'
+    return ''.join('\\' + c if c in escape_chars else c for c in text)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+    text = (
         "🤖 **Welcome to Maildrop TempMail Bot!**\n\n"
         "Generate disposable emails via Maildrop service.\n\n"
         "**Commands:**\n"
         "/newemail - Generate a new temporary email\n"
         "/myemails - List your active emails\n"
         "/deleteemail - Remove an email address\n"
-        "/checkinbox - Check for new messages",
-        parse_mode="Markdown"
+        "/checkinbox - Check for new messages"
     )
+    await update.message.reply_text(escape_markdown(text), parse_mode="MarkdownV2")
 
 async def new_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -87,32 +73,29 @@ async def new_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     save_user_sessions()
 
-    await update.message.reply_text(
-        f"✅ **New email created!**\n**Address:** `{email_address}`\n\n"
-        f"Use /my_emails to see all your addresses.",
-        parse_mode="Markdown"
-    )
+    reply = f"✅ **New email created!**\n**Address:** `{email_address}`\n\nUse /myemails to see all your addresses."
+    await update.message.reply_text(escape_markdown(reply), parse_mode="MarkdownV2")
 
 async def my_emails(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
 
     if chat_id not in user_sessions or not user_sessions[chat_id]["inboxes"]:
-        await update.message.reply_text("❌ You don't have any active emails. Use /new_email to create one.")
+        await update.message.reply_text("❌ You don't have any active emails. Use /newemail to create one.")
         return
 
     inboxes = user_sessions[chat_id]["inboxes"]
     text = "📧 **Your Active Emails:**\n\n"
     for inbox in inboxes:
         text += f"{inbox['id']}. `{inbox['email']}`\n"
-    text += "\nUse `/delete_email <number>` to remove one."
-    await update.message.reply_text(text, parse_mode="Markdown")
+    text += "\nUse `/deleteemail <number>` to remove one."
+    await update.message.reply_text(escape_markdown(text), parse_mode="MarkdownV2")
 
 async def delete_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     args = context.args
 
     if not args or not args[0].isdigit():
-        await update.message.reply_text("❌ Usage: /delete_email <number>\nExample: /delete_email 2")
+        await update.message.reply_text("❌ Usage: /deleteemail <number>\nExample: /deleteemail 2")
         return
 
     inbox_id_to_delete = int(args[0])
@@ -129,15 +112,17 @@ async def delete_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 del user_sessions[chat_id]
 
             save_user_sessions()
-            await update.message.reply_text(f"🗑️ Deleted email: `{removed['email']}`", parse_mode="Markdown")
+            msg = f"🗑️ Deleted email: `{removed['email']}`"
+            await update.message.reply_text(escape_markdown(msg), parse_mode="MarkdownV2")
             return
 
-    await update.message.reply_text(f"❌ Could not find an email with ID #{inbox_id_to_delete}.")
+    msg = f"❌ Could not find an email with ID #{inbox_id_to_delete}."
+    await update.message.reply_text(escape_markdown(msg), parse_mode="MarkdownV2")
 
 async def check_inbox(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if chat_id not in user_sessions or not user_sessions[chat_id]["inboxes"]:
-        await update.message.reply_text("❌ You don't have any active emails. Use /new_email to create one.")
+        await update.message.reply_text("❌ You don't have any active emails. Use /newemail to create one.")
         return
 
     inboxes = user_sessions[chat_id]["inboxes"]
@@ -151,9 +136,9 @@ async def check_inbox(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "🔍 **Which inbox would you like to check?**",
+        escape_markdown("🔍 **Which inbox would you like to check?**"),
         reply_markup=reply_markup,
-        parse_mode="Markdown"
+        parse_mode="MarkdownV2"
     )
 
 async def check_single_inbox(update: Update, context: ContextTypes.DEFAULT_TYPE, mailbox: str):
@@ -166,9 +151,9 @@ async def check_single_inbox(update: Update, context: ContextTypes.DEFAULT_TYPE,
     if not target:
         msg = "❌ Email not found in your list."
         if hasattr(update, "callback_query") and update.callback_query:
-            await update.callback_query.edit_message_text(msg)
+            await update.callback_query.edit_message_text(escape_markdown(msg), parse_mode="MarkdownV2")
         else:
-            await update.message.reply_text(msg)
+            await update.message.reply_text(escape_markdown(msg), parse_mode="MarkdownV2")
         return
 
     seen_ids = target["seen_ids"]
@@ -179,9 +164,9 @@ async def check_single_inbox(update: Update, context: ContextTypes.DEFAULT_TYPE,
     except requests.RequestException:
         msg = "❌ Failed to connect to Maildrop service."
         if hasattr(update, "callback_query") and update.callback_query:
-            await update.callback_query.edit_message_text(msg)
+            await update.callback_query.edit_message_text(escape_markdown(msg), parse_mode="MarkdownV2")
         else:
-            await update.message.reply_text(msg)
+            await update.message.reply_text(escape_markdown(msg), parse_mode="MarkdownV2")
         return
 
     new_msgs = [m for m in messages if m["id"] not in seen_ids]
@@ -192,16 +177,16 @@ async def check_single_inbox(update: Update, context: ContextTypes.DEFAULT_TYPE,
     if not new_msgs:
         msg = f"📭 No new messages in `{target['email']}`."
     else:
-        msg = f"📨 Found {len(new_msgs)} new message(s) in `{target['email']}:`\n\n"
+        msg = f"📨 Found {len(new_msgs)} new message(s) in `{target['email']}`:\n\n"
         for m in new_msgs:
             sender = m.get("from", "unknown")
             subject = m.get("subject", "(no subject)")
-            msg += f"• **From:** {sender}\n  **Subject:** {subject}\n\n"
+            msg += f"• **From:** {escape_markdown(sender)}\n  **Subject:** {escape_markdown(subject)}\n\n"
 
     if hasattr(update, "callback_query") and update.callback_query:
-        await update.callback_query.edit_message_text(msg, parse_mode="Markdown")
+        await update.callback_query.edit_message_text(escape_markdown(msg), parse_mode="MarkdownV2")
     else:
-        await update.message.reply_text(msg, parse_mode="Markdown")
+        await update.message.reply_text(escape_markdown(msg), parse_mode="MarkdownV2")
 
 async def inbox_button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -226,3 +211,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
