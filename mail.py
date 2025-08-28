@@ -8,7 +8,7 @@ import string
 from typing import Dict, Any
 
 # Config
-TOKEN = "f8327606596:AAHbJyzdnbNY3rWMfhy7e86S1wqihQxy0JQ"  # Your Telegram Bot Token here
+TOKEN = "8327606596:AAHbJyzdnbNY3rWMfhy7e86S1wqihQxy0JQ"  # Your Telegram Bot Token here
 DATA_FILE = "user_sessions.json"
 MAILDROP_API = "https://api.maildrop.cc/v1"
 
