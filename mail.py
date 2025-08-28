@@ -3,11 +3,26 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 import json
 import os
+import logging
 import random
 import string
 from typing import Dict, Any
 
-# Config
+
+logging.basicConfig(level=logging.DEBUG)
+
+# Inside your _check_single_inbox:
+logging.debug(f"Checking Maildrop inbox for mailbox: {mailbox}")
+try:
+    resp = requests.get(f"{MAILDROP_API}/mailbox/{mailbox}")
+    resp.raise_for_status()
+    logging.debug(f"Maildrop response code: {resp.status_code}")
+    logging.debug(f"Maildrop response content: {resp.text}")
+    messages = resp.json().get("messages", [])
+except Exception as e:
+    logging.error(f"Error fetching Maildrop mailbox: {e}")
+
+
 TOKEN = "8327606596:AAHbJyzdnbNY3rWMfhy7e86S1wqihQxy0JQ"  # Your Telegram Bot Token here
 DATA_FILE = "user_sessions.json"
 MAILDROP_API = "https://api.maildrop.cc/v1"
@@ -22,6 +37,11 @@ def load_user_sessions() -> Dict[int, Dict[str, Any]]:
         except Exception:
             return {}
     return {}
+
+def generate_mailbox_name(length=8):
+    mailbox = ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+    logging.debug(f"Generated mailbox: {mailbox}")
+    return mailbox
 
 # Save sessions
 def save_user_sessions():
